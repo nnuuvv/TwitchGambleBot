@@ -26,7 +26,7 @@ namespace TwitchBot
             
             Thread.Sleep(5000);
 
-            double delay = 15;
+            double delay = double.Parse(File.ReadAllLines(Directory.GetCurrentDirectory() + @"/Data/temp_pointstorage.txt")[2]);
 
             var startTimeSpan = TimeSpan.Zero;
             var periodTimeSpan = TimeSpan.FromMinutes(delay);
@@ -168,7 +168,7 @@ namespace TwitchBot
                 
                 var items = message.Split(" ");
                 points = long.Parse(items[items.Length - 2].Trim());
-                Console.WriteLine(DateTime.Now.ToLocalTime() + ": points after gamble: " + points);
+                Console.WriteLine(DateTime.Now.ToLocalTime() + ": points after gamble: " + String.Format("{0:n}", points));
                 
                 string pointHistory = File.ReadAllText(storagePath);
                 File.WriteAllText(storagePath, pointHistory + ":" + points.ToString());
