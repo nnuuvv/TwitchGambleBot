@@ -20,36 +20,67 @@ namespace TwitchBot
     {
         static void Main(string[] args)
         {
+            //AutoGamble();
             
-            Bot bot = new Bot();
-            DateTime lastGamble = DateTime.Now;
-            
-            Thread.Sleep(5000);
-
-            double delay = double.Parse(File.ReadAllLines(Directory.GetCurrentDirectory() + @"/Data/temp_pointstorage.txt")[2]);
-
-            var startTimeSpan = TimeSpan.Zero;
-            var periodTimeSpan = TimeSpan.FromMinutes(delay);
-            var timer = new System.Threading.Timer((e) =>
-            {
-                if (lastGamble.Subtract(DateTime.Now) > TimeSpan.FromMinutes(delay*2))
-                {
-                    bot = new Bot();
-                    Thread.Sleep(5000);
-                }
-                lastGamble = bot.Gamble();   
-            }, null, startTimeSpan, periodTimeSpan);
-            
+            var bot = new Bot();
             while (true)
             {
-                string cur = Console.ReadLine();
-                if (cur.StartsWith("say"))
+                var cur = Console.ReadLine();
+                if (cur != null && cur.StartsWith("say"))
                 {
                     bot.Client_SendMessage(cur.Remove(0, 3).ToString());
                 }
             }
         }
+        
+        static void AutoGamble()
+        {
+            var bot = new Bot();
+
+            Thread.Sleep(5000);
+
+            double delay = 5.1;
+
+            var startTimeSpan = TimeSpan.Zero;
+            var periodTimeSpan = TimeSpan.FromMinutes(delay);
+            var timer = new System.Threading.Timer((e) =>
+            {
+                if (bot == null)
+                {
+                    NewBot();
+                    Console.WriteLine("--starting bot");
+                }
+                bot.Gamble();
+                Console.WriteLine("--gambling");
+                DisposeBot();
+                Console.WriteLine("--disposing bot");
+            }, null, startTimeSpan, periodTimeSpan);
+            
+            while (true)
+            {
+                var cur = Console.ReadLine();
+                if (cur != null && cur.StartsWith("say"))
+                {
+                    NewBot();
+                    bot.Client_SendMessage(cur.Remove(0, 3).ToString());
+                    DisposeBot();
+                }
+            }
+
+            void NewBot()
+            {
+                bot = new Bot();
+                Thread.Sleep(5000);
+            }
+
+            void DisposeBot()
+            {
+                Thread.Sleep(5000);
+                bot = null;
+            }
+        }
     }
+
 
     class Bot
     {
@@ -78,10 +109,6 @@ namespace TwitchBot
             
             client.OnLog += Client_OnLog;
             client.OnJoinedChannel += Client_OnJoinedChannel;
-            client.OnMessageReceived += Client_OnMessageReceived;
-            client.OnWhisperReceived += Client_OnWhisperReceived;
-            client.OnNewSubscriber += Client_OnNewSubscriber;
-            client.OnConnected += Client_OnConnected;
             client.OnDisconnected += Client_OnDisconnected;
 
             Console.WriteLine("Attempting to Connect...");
@@ -90,6 +117,7 @@ namespace TwitchBot
 
         private void Client_OnDisconnected(object? sender, OnDisconnectedEventArgs e)
         {
+            Console.WriteLine("Disconnected: " + e.ToString());
             Console.WriteLine("Attempting to Reconnect...");
             client.Reconnect();
         }
@@ -98,30 +126,12 @@ namespace TwitchBot
         {
             GetPointsFromMessage(e.Data);
         }
-        private void Client_OnConnected(object sender, OnConnectedArgs e)
-        {
-            Console.WriteLine($"Connected to {e.AutoJoinChannel}");
-        }
-  
+
         private void Client_OnJoinedChannel(object sender, OnJoinedChannelArgs e)
         {
-            client.SendMessage(e.Channel, "!points");
-        }
-
-        private void Client_OnMessageReceived(object sender, OnMessageReceivedArgs e)
-        {
-            
-        }
-
-        private void Client_OnWhisperReceived(object sender, OnWhisperReceivedArgs e)
-        {
-            
+            Console.WriteLine(e.BotUsername + " joined channel: " + e.Channel);
         }
         
-        private void Client_OnNewSubscriber(object sender, OnNewSubscriberArgs e)
-        {
-
-        }
 
         public void Client_SendMessage(string message)
         {
@@ -159,7 +169,7 @@ namespace TwitchBot
             {//!points
                 var items = message.Split(":");
                 points = long.Parse(items.Last().Trim());
-                Console.WriteLine("points: " + points);
+                Console.WriteLine("points: " + String.Format("{0:n}", points));
             }
 
             if (message.Contains("Rolled") && message.Contains(_creds[0]) && message.Contains("Points"))
@@ -175,16 +185,14 @@ namespace TwitchBot
             }
         }
 
-        public DateTime Gamble()
+        public void Gamble()
         {
-            
             Client_SendMessage("!points");
             Thread.Sleep(5000);
-            if (points > 1000) ;
-            Client_SendMessage("!gamble " + Math.Floor(points*0.1));
-            
-            return DateTime.Now;
+            if (points > 1000)
+            {
+                Client_SendMessage("!gamble " + Math.Floor(points*0.1));
+            }
         }
-
     }
 }
