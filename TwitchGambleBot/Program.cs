@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using TwitchLib.Client;
 using TwitchLib.Client.Enums;
@@ -20,9 +21,10 @@ namespace TwitchBot
     {
         static void Main(string[] args)
         {
-            //AutoGamble();
+            bool endOnJp = false;
+            AutoGamble(endOnJp);
             
-            var bot = new Bot();
+            /*var bot = new Bot(endOnJp);
             while (true)
             {
                 var cur = Console.ReadLine();
@@ -30,12 +32,12 @@ namespace TwitchBot
                 {
                     bot.Client_SendMessage(cur.Remove(0, 3).ToString());
                 }
-            }
+            }*/
         }
         
-        static void AutoGamble()
+        static void AutoGamble(bool endOnJp)
         {
-            var bot = new Bot();
+            var bot = new Bot(endOnJp);
 
             Thread.Sleep(5000);
 
@@ -69,7 +71,7 @@ namespace TwitchBot
 
             void NewBot()
             {
-                bot = new Bot();
+                bot = new Bot(endOnJp);
                 Thread.Sleep(5000);
             }
 
@@ -85,7 +87,7 @@ namespace TwitchBot
     class Bot
     {
         TwitchClient client;
-        
+        private bool _endOnJp;
         private long points { get; set; }
 
         private static readonly string credPath =
@@ -96,8 +98,9 @@ namespace TwitchBot
         private static readonly string _channelToBot = File.ReadAllLines(credPath)[1];
         
         ConnectionCredentials credentials = new ConnectionCredentials(_creds[0],_creds[1]);
-        public Bot()
+        public Bot(bool endOnJp)
         {
+            _endOnJp = endOnJp;
             var clientOptions = new ClientOptions
             {
                 MessagesAllowedInPeriod = 100000000,
@@ -114,6 +117,7 @@ namespace TwitchBot
             Console.WriteLine("Attempting to Connect...");
             client.Connect();
         }
+
 
         private void Client_OnDisconnected(object? sender, OnDisconnectedEventArgs e)
         {
@@ -174,10 +178,15 @@ namespace TwitchBot
 
             if (message.Contains("Rolled") && message.Contains(_creds[0]) && message.Contains("Points"))
             {//!gamble
-                Console.WriteLine("Roll msg: " + message);
+                //Console.WriteLine("Roll msg: " + message);
                 
                 var items = message.Split(" ");
                 points = long.Parse(items[items.Length - 2].Trim());
+
+                if(int.Parse(items[6].Replace(".", "")) == 100 && _endOnJp)
+                    Environment.Exit(0);
+                
+                
                 Console.WriteLine(DateTime.Now.ToLocalTime() + ": points after gamble: " + String.Format("{0:n}", points));
                 
                 string pointHistory = File.ReadAllText(storagePath);
@@ -191,7 +200,7 @@ namespace TwitchBot
             Thread.Sleep(5000);
             if (points > 1000)
             {
-                Client_SendMessage("!gamble " + Math.Floor(points*0.1));
+                Client_SendMessage("!gamble " + Math.Floor(points*0.1).ToString("F0", CultureInfo.InvariantCulture));
             }
         }
     }
